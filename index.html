@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Compare — Kalshi vs Polymarket vs FanDuel</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mut:#6a7280;--bd:#d5d9e0;--ac:#1f6feb;--good:#18c26a;--warn:#b25e00}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b22;--tx:#e8ebf0;--mut:#8b94a3;--bd:#363d49;--ac:#5aa0ff;--good:#3be08a;--warn:#ffb454}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0}
+.sub{color:var(--mut);font-size:13px}
+.bar{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.chip{border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:7px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:14px}
+.chip.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.game{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+.gh{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.gt{font-weight:650}.gm{color:var(--mut);font-size:12.5px}
+.live{color:#e5484d;font-weight:650}
+.tw{overflow-x:auto;padding:4px}
+.grid{display:grid;grid-template-columns:minmax(120px,1.5fr) repeat(3,minmax(78px,1fr)) minmax(64px,.7fr);gap:8px;min-width:500px;align-items:stretch}
+.hd{font-size:12px;color:var(--mut);text-align:center;font-weight:600}
+.hd:first-child{text-align:left}
+.tm,.vc{border-radius:10px;padding:10px 8px;display:flex;align-items:center;justify-content:center;min-height:44px}
+.tm{justify-content:flex-start;font-weight:600;font-size:14px;line-height:1.2}
+.tm small{display:block;font-weight:400;opacity:.85;font-size:11px}
+.vc{font-size:18px;font-weight:650;letter-spacing:.2px;box-shadow:0 0 0 2px var(--bd)}
+.vc.best{box-shadow:0 0 0 3px var(--good)}
+.vc.none{background:transparent;color:var(--mut);font-weight:400}
+.sp{display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mut)}
+.sp.big{color:var(--warn);font-weight:650}
+@keyframes flash{
+  0%,100%{box-shadow:0 0 0 2px var(--bd)}
+  25%,75%{box-shadow:0 0 0 5px #ffd400,0 0 18px 6px rgba(255,212,0,.65)}
+  50%{box-shadow:0 0 0 2px #ffd400}}
+.vc.flash{animation:flash .8s ease-in-out 3}
+@media (prefers-reduced-motion:reduce){.vc.flash{animation:none;box-shadow:0 0 0 5px #ffd400}}
+.msg{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;color:var(--mut)}
+.foot{color:var(--mut);font-size:12px;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Market Compare</h1>
+  <div class="sub">Kalshi · Polymarket · FanDuel · <span id="status">loading…</span></div>
+  <div class="bar" id="leagues"></div>
+  <div id="games"></div>
+  <div class="foot">Percentages are each venue’s implied probability of the team winning. Cells are shaded in each team’s primary color. Kalshi and Polymarket use the midpoint of the live best bid and ask (or the last trade if there is no two-sided book); FanDuel is converted from its moneyline with the vig removed. A FanDuel box flashes yellow when its line moves. Kalshi and Polymarket refresh about every 20 seconds, and FanDuel (via The Odds API) every few minutes to save API credits. Green outline = lowest probability for that team across venues. Spread = gap between the highest and lowest venue, flagged at 4+ points. A venue shows “—” if it has no matching market. Informational only, not betting or financial advice.</div>
+</div>
+<script>
+// ---------- team primary colors ----------
+const NBA={hawks:"#E03A3E",celtics:"#007A33",nets:"#111111",hornets:"#1D1160",bulls:"#CE1141",cavaliers:"#860038",mavericks:"#00538C",nuggets:"#0E2240",pistons:"#C8102E",warriors:"#1D428A",rockets:"#CE1141",pacers:"#002D62",clippers:"#C8102E",lakers:"#552583",grizzlies:"#5D76A9",heat:"#98002E",bucks:"#00471B",timberwolves:"#0C2340",pelicans:"#0C2340",knicks:"#006BB6",thunder:"#007AC1",magic:"#0077C0","76ers":"#006BB6",suns:"#1D1160",blazers:"#E03A3E",kings:"#5A2D81",spurs:"#8A8D8F",raptors:"#CE1141",jazz:"#002B5C",wizards:"#002B5C"};
+const NHL={ducks:"#F47A38",mammoth:"#6CACE4",bruins:"#FFB81C",sabres:"#003087",flames:"#C8102E",hurricanes:"#CC0000",blackhawks:"#CF0A2C",avalanche:"#6F263D",jackets:"#002654",stars:"#006847",wings:"#CE1126",oilers:"#FF4C00",panthers:"#041E42",kings:"#111111",wild:"#154734",canadiens:"#AF1E2D",predators:"#FFB81C",devils:"#CE1126",islanders:"#00539B",rangers:"#0038A8",senators:"#C52032",flyers:"#F74902",penguins:"#FCB514",sharks:"#006D75",kraken:"#001628",blues:"#002F87",lightning:"#002868",leafs:"#00205B",canucks:"#00205B",knights:"#B4975A",capitals:"#C8102E",jets:"#041E42"};
+const COL={"alabama":"#9E1B32","arizona state":"#8C1D40","arizona":"#CC0033","arkansas":"#9D2235","auburn":"#0C2340","baylor":"#154734","boise state":"#0033A0","boston college":"#98002E","byu":"#002E5D","cincinnati":"#E00122","clemson":"#F56600","colorado":"#CFB87C","connecticut":"#000E2F","uconn":"#000E2F","creighton":"#005CA9","dayton":"#CE1141","duke":"#003087","florida state":"#782F40","florida":"#0021A5","georgetown":"#041E42","georgia tech":"#B3A369","georgia":"#BA0C2F","gonzaga":"#002967","houston":"#C8102E","illinois":"#E84A27","indiana":"#990000","iowa state":"#C8102E","iowa":"#FFCD00","kansas state":"#512888","kansas":"#0051BA","kentucky":"#0033A0","liberty":"#002D62","louisville":"#AD0000","lsu":"#461D7C","marquette":"#003366","maryland":"#E03A3E","memphis":"#0F3A93","miami (oh)":"#C3142D","miami":"#F47321","michigan state":"#18453B","michigan":"#00274C","minnesota":"#7A0019","mississippi state":"#660000","missouri":"#F1B82D","nc state":"#CC0000","nebraska":"#E41C38","nevada":"#003366","new mexico":"#BA0C2F","north carolina":"#7BAFD4","notre dame":"#0C2340","ohio state":"#BB0000","oklahoma state":"#FF7300","oklahoma":"#841617","ole miss":"#CE1126","oregon state":"#DC4405","oregon":"#154733","penn state":"#041E42","pittsburgh":"#003594","providence":"#111111","purdue":"#CEB888","rutgers":"#CC0033","saint louis":"#003DA5","san diego state":"#A6192E","santa clara":"#862633","seton hall":"#004488","smu":"#0033A0","south carolina":"#73000A","st. john's":"#BA0C2F","stanford":"#8C1515","syracuse":"#D44500","tcu":"#4D1979","temple":"#9D2235","tennessee":"#FF8200","texas a&m":"#500000","texas state":"#501214","texas tech":"#CC0000","texas":"#BF5700","tulane":"#006747","ucf":"#BA9B37","ucla":"#2D68C4","usc":"#990000","utah":"#CC0000","vanderbilt":"#866D4B","villanova":"#00205B","virginia tech":"#861F41","virginia":"#232D4B","wake forest":"#9E7E38","washington state":"#981E32","washington":"#4B2E83","west virginia":"#002855","wisconsin":"#C5050C","wyoming":"#492F24","xavier":"#0C2340"};
+const COLKEYS=Object.keys(COL).sort((a,b)=>b.length-a.length);
+const FALLBACK="#4b5563";
+function teamColor(league,name){
+  const n=(name||"").toLowerCase();
+  if(league==="NBA"||league==="NHL"){const m=league==="NBA"?NBA:NHL,w=n.split(" ");return m[w[w.length-1]]||m[w[w.length-2]]||FALLBACK}
+  const k=COLKEYS.find(k=>n.startsWith(k));return k?COL[k]:FALLBACK;
+}
+function ink(hex){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return (0.299*r+0.587*g+0.114*b)>150?"#111":"#fff"}
+
+// ---------- data + render ----------
+const LG={ALL:"All",NBA:"NBA",NHL:"NHL",CFB:"College Football",CBB:"Men’s College Basketball"};
+let lg="ALL", data=null, prevFd=null;
+const imp=o=>o==null?null:(o<0?-o/(-o+100):100/(o+100));
+const pct=p=>p==null?"—":(p*100).toFixed(1)+"%";
+function probs(g){
+  const k=g.k.map(q=>q==null?null:q.mid/100), p=g.p.map(q=>q==null?null:q.mid/100);
+  let f=g.fd.map(imp); if(f[0]!=null&&f[1]!=null){const t=f[0]+f[1];f=[f[0]/t,f[1]/t]}
+  return {k,p,f};
+}
+function render(flashSet){
+  flashSet=flashSet||new Set();
+  document.getElementById("leagues").innerHTML=Object.keys(LG).map(k=>`<button class="chip ${k===lg?"on":""}" data-l="${k}">${LG[k]}</button>`).join("");
+  const el=document.getElementById("games");
+  if(!data){el.innerHTML='<div class="msg">Loading…</div>';return}
+  let out=data.hasKey?"":'<div class="msg">The ODDS_API_KEY environment variable isn’t set on the server, so no games can be listed. See README.</div>';
+  const list=data.games.filter(g=>lg==="ALL"||g.league===lg);
+  if(!list.length){el.innerHTML=out+'<div class="msg">No games found for this selection right now. College shows the next 5 days, NBA and NHL the next 36 hours.</div>';return}
+  out+=list.map(g=>{
+    const pr=probs(g), live=g.start<Date.now();
+    const rows=[0,1].map(s=>{
+      const name=s?g.home:g.away, col=teamColor(g.league,name), tx=ink(col);
+      const vals=[pr.k[s],pr.p[s],pr.f[s]], have=vals.filter(v=>v!=null);
+      const mn=have.length>1?Math.min(...have):null;
+      const sp=have.length>1?(Math.max(...have)-Math.min(...have))*100:null;
+      const cell=(v,extra)=>v==null
+        ?`<div class="vc none">—</div>`
+        :`<div class="vc ${v===mn&&mn!=null?"best":""} ${extra||""}" style="background:${col};color:${tx}">${pct(v)}</div>`;
+      const fl=flashSet.has(g.id+"|"+s)?"flash":"";
+      return `<div class="tm" style="background:${col};color:${tx}"><span>${name}${s?"<small>home</small>":""}</span></div>
+        ${cell(pr.k[s])}${cell(pr.p[s])}${cell(pr.f[s],fl)}
+        <div class="sp ${sp>=4?"big":""}">${sp!=null?sp.toFixed(1)+" pts":"—"}</div>`;
+    }).join("");
+    const t=new Date(g.start).toLocaleString([], {weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+    return `<div class="game"><div class="gh"><div class="gt">${g.away} @ ${g.home}</div><div class="gm">${g.league} · ${live?'<span class="live">LIVE</span> · started ':""}${t}</div></div>
+      <div class="tw"><div class="grid"><div class="hd">Team</div><div class="hd">Kalshi</div><div class="hd">Polymarket</div><div class="hd">FanDuel</div><div class="hd">Spread</div>${rows}</div></div></div>`;
+  }).join("");
+  el.innerHTML=out;
+}
+function changedFanDuel(nd){
+  const s=new Set(); if(!prevFd)return s;
+  for(const g of nd.games){const o=prevFd[g.id]; if(!o)continue;
+    g.fd.forEach((v,i)=>{if(v!=null&&o[i]!=null&&v!==o[i])s.add(g.id+"|"+i)})}
+  return s;
+}
+async function load(){
+  let fl=new Set();
+  try{
+    const r=await fetch("/api/odds"); if(!r.ok)throw new Error(r.status);
+    const nd=await r.json();
+    fl=changedFanDuel(nd);
+    prevFd={}; nd.games.forEach(g=>prevFd[g.id]=g.fd.slice());
+    data=nd;
+    document.getElementById("status").textContent="updated "+new Date(data.updated).toLocaleTimeString();
+  }catch(e){document.getElementById("status").textContent="update failed, retrying…"}
+  render(fl);
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-l]");if(b){lg=b.dataset.l;render()}});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)load()});
+load(); setInterval(()=>{if(!document.hidden)load()},20000);
+</script>
+</body>
+</html>
